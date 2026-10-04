@@ -9,6 +9,10 @@ importers:
   .: {}
 
   apps/worker:
+    dependencies:
+      hono:
+        specifier: ^4.13.12
+        version: 4.13.12
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^5.20261003.1
@@ -449,6 +453,10 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
+  hono@4.13.12:
+    resolution: {integrity: sha512-6E2QDAc9Ick9Sq77ZrGS/dk2WUYni91aufTw6LJKpV7w8kW5/GxVUc650FOADOmlwg3K+f7Pun6XlV+pYmW6gw==}
+    engines: {node: '>=16.9.0'}
+
   kleur@4.1.5:
     resolution: {integrity: sha512-o+NO+8WrRiQEE4/7nwRJhN1HWpVmJm511pBHUxPLtp0BUISzlBplORYSmTclCnJvQq2tKu/sgl3xVpkc7ZWuQQ==}
     engines: {node: '>=6'}
@@ -813,6 +821,8 @@ snapshots:
 
   fsevents@2.3.3:
     optional: true
+
+  hono@4.13.12: {}
 
   kleur@4.1.5: {}
 

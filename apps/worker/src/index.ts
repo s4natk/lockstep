@@ -1,5 +1,12 @@
-export default {
-  async fetch(): Promise<Response> {
-    return new Response("Not found", { status: 404 });
-  },
-} satisfies ExportedHandler;
+import { Hono } from "hono";
+
+const app = new Hono();
+
+app.get("/health", (c) => {
+  return c.json({
+    ok: true,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+export default app;
