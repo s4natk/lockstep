@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.next/
+.wrangler/
+.env
+.env.local
+.env.*.local
+target/
+*.log
+.DS_Store
+Thumbs.db
