@@ -166,3 +166,83 @@ fn hazard(statement: &ParsedStatement, code: HazardCode, reason: &str) -> Hazard
         reason: reason.to_string(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn codes(sql: &str) -> Vec<&'static str> {
+        classify_migration(sql)
+            .unwrap()
+            .hazards
+            .iter()
+            .map(|hazard| hazard.code.as_str())
+            .collect()
+    }
+
+    #[test]
+    fn drop_column_drop_table_and_truncate_are_data_loss() {
+        assert_eq!(
+            codes("ALTER TABLE users DROP COLUMN email"),
+            vec!["data_loss"]
+        );
+        assert_eq!(codes("DROP TABLE sessions"), vec!["data_loss"]);
+        assert_eq!(codes("TRUNCATE orders"), vec!["data_loss"]);
+        let parsed = classify_migration("ALTER TABLE users DROP COLUMN email").unwrap();
+        assert_eq!(
+            parsed.hazards[0].reason,
+            "DROP COLUMN deletes stored values."
+        );
+    }
+
+    #[test]
+    fn not_null_and_blocking_index_builds_are_lock_risk() {
+        assert_eq!(
+            codes("ALTER TABLE users ADD COLUMN bio text NOT NULL"),
+            vec!["lock_risk"]
+        );
+        assert_eq!(
+            codes("ALTER TABLE users ALTER COLUMN bio SET NOT NULL"),
+            vec!["lock_risk"]
+        );
+        assert_eq!(
+            codes("CREATE INDEX users_email_idx ON users (email)"),
+            vec!["lock_risk"]
+        );
+        assert_eq!(
+            codes("ALTER TABLE users ADD COLUMN id bigint PRIMARY KEY"),
+            vec!["lock_risk"]
+        );
+    }
+
+    #[test]
+    fn alter_column_type_is_a_rewrite() {
+        let parsed =
+            classify_migration("ALTER TABLE users ALTER COLUMN age TYPE bigint").unwrap();
+        assert_eq!(parsed.hazards.len(), 1);
+        assert_eq!(parsed.hazards[0].code, HazardCode::Rewrite);
+        assert_eq!(
+            parsed.hazards[0].reason,
+            "ALTER COLUMN TYPE rewrites the table."
+        );
+    }
+
+    #[test]
+    fn nullable_columns_defaults_and_concurrent_indexes_are_safe() {
+        assert!(codes("ALTER TABLE users ADD COLUMN bio text").is_empty());
+        assert!(codes("ALTER TABLE users ADD COLUMN bio text NOT NULL DEFAULT ''").is_empty());
+        assert!(codes("CREATE INDEX CONCURRENTLY users_email_idx ON users (email)").is_empty());
+    }
+
+    #[test]
+    fn hazards_keep_statement_index_and_source_span() {
+        let sql = "ALTER TABLE users ADD COLUMN bio text;\nDROP TABLE sessions";
+        let parsed = classify_migration(sql).unwrap();
+        assert_eq!(parsed.statements.len(), 2);
+        assert_eq!(parsed.hazards.len(), 1);
+        let hazard = &parsed.hazards[0];
+        assert_eq!(hazard.statement_index, 1);
+        assert_eq!(hazard.sql, "DROP TABLE sessions");
+        assert_eq!(&sql[hazard.start..hazard.end], hazard.sql);
+    }
+}
