@@ -8,3 +8,6 @@ description = "DDL hazard classifier for Lockstep"
 
 [lib]
 path = "src/lib.rs"
+
+[dependencies]
+sqlparser = { version = "0.63", default-features = false, features = ["std"] }
