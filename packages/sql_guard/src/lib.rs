@@ -2,6 +2,8 @@
 //!
 //! Hazard labels come from this crate. The language model only explains them.
 
+mod classify;
 mod split;
 
+pub use classify::{classify_migration, Hazard, HazardCode, ParseResult};
 pub use split::{split_statements, ParseError, ParsedStatement};
