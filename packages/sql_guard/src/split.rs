@@ -1,9 +1,11 @@
+use serde::Serialize;
 use sqlparser::dialect::PostgreSqlDialect;
 use sqlparser::parser::Parser;
 use sqlparser::tokenizer::{Token, Tokenizer};
 
 /// One top-level statement and the byte span it occupies in the original migration.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ParsedStatement {
     pub index: usize,
     pub sql: String,

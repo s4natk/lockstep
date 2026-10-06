@@ -1,3 +1,4 @@
+use serde::Serialize;
 use sqlparser::ast::{
     AlterColumnOperation, AlterTableOperation, ColumnDef, ColumnOption, ObjectType, Statement,
 };
@@ -9,7 +10,8 @@ use crate::{split_statements, ParseError, ParsedStatement};
 /// A hazard the parser can prove from the statement AST.
 ///
 /// A statement that is not listed here is safe, and it does not appear in [`ParseResult::hazards`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum HazardCode {
     LockRisk,
     DataLoss,
@@ -27,7 +29,8 @@ impl HazardCode {
 }
 
 /// One dangerous statement, with the byte span it occupies in the original migration.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Hazard {
     pub code: HazardCode,
     pub statement_index: usize,
@@ -38,7 +41,8 @@ pub struct Hazard {
 }
 
 /// Statements plus the hazards the classifier found.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ParseResult {
     pub statements: Vec<ParsedStatement>,
     pub hazards: Vec<Hazard>,

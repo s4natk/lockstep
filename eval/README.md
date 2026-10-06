@@ -1,6 +1,6 @@
 # Eval fixtures
 
-This directory is the labeled set. It is empty on purpose. Migrations, runbooks, and scores land in later commits. No accuracy number belongs here until a run prints one.
+`sql_guard` checks the migration files in `migrations/`. Runbook chunks are not here yet. No accuracy number belongs in this file until a retrieval run prints one.
 
 ## Migrations
 
