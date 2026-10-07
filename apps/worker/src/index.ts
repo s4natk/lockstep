@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
-import { parseMigration } from "./parser.js";
+import { parseMigration, MigrationParseError } from "./parser.js";
 
 const app = new Hono();
 
@@ -22,7 +22,13 @@ app.get("/health", (c) => {
 });
 
 app.post("/api/parse", async (c) => {
-  const body: unknown = await c.req.json();
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Request body must be JSON." }, 400);
+  }
+
   const sql =
     typeof body === "object" &&
     body !== null &&
@@ -33,7 +39,15 @@ app.post("/api/parse", async (c) => {
   if (sql.trim() === "") {
     return c.json({ error: "sql is required" }, 400);
   }
-  return c.json(parseMigration(sql));
+
+  try {
+    return c.json(parseMigration(sql));
+  } catch (error) {
+    if (error instanceof MigrationParseError) {
+      return c.json({ error: error.message }, 400);
+    }
+    throw error;
+  }
 });
 
 export default app;
