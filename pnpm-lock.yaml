@@ -35,6 +35,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@lockstep/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       hono:
         specifier: ^4.13.12
         version: 4.13.12

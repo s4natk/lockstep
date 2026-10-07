@@ -13,6 +13,7 @@
     "wrangler": "^4.147.0"
   },
   "dependencies": {
+    "@lockstep/shared": "workspace:*",
     "hono": "^4.13.12"
   }
 }
