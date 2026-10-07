@@ -1,4 +1,5 @@
-import { parse_migration } from "../../../packages/sql_guard/pkg/sql_guard.js";
+import init, { parse_migration } from "../../../packages/sql_guard/pkg/sql_guard.js";
+import wasmModule from "../../../packages/sql_guard/pkg/sql_guard_bg.wasm";
 import type { ParseResult } from "@lockstep/shared";
 
 export class MigrationParseError extends Error {
@@ -8,7 +9,15 @@ export class MigrationParseError extends Error {
   }
 }
 
-export function parseMigration(sql: string): ParseResult {
+let ready: Promise<unknown> | undefined;
+
+function loadParser(): Promise<unknown> {
+  ready ??= init({ module_or_path: wasmModule });
+  return ready;
+}
+
+export async function parseMigration(sql: string): Promise<ParseResult> {
+  await loadParser();
   try {
     return JSON.parse(parse_migration(sql)) as ParseResult;
   } catch (error) {

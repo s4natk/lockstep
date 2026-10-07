@@ -18,3 +18,4 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r --if-present typecheck
+      - run: pnpm --filter @lockstep/worker test

@@ -7,13 +7,11 @@
   "files": [
     "sql_guard_bg.wasm",
     "sql_guard.js",
-    "sql_guard_bg.js",
     "sql_guard.d.ts"
   ],
   "main": "sql_guard.js",
   "types": "sql_guard.d.ts",
   "sideEffects": [
-    "./sql_guard.js",
     "./snippets/*"
   ]
 }

@@ -8,7 +8,7 @@ The `wasm32-unknown-unknown` build exports `parse_migration`. It returns JSON wi
 
 ```text
 rustup target add wasm32-unknown-unknown
-wasm-pack build --target bundler --release
+wasm-pack build --target web --release
 ```
 
 The release profile uses `opt-level = "s"` and link-time optimization so the Worker bundle stays small. `sqlparser` is built with `default-features = false` and the `std` feature only. Dialect selection is `PostgreSqlDialect` in code. The crate does not ship a Postgres-only feature flag.

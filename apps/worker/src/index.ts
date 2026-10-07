@@ -41,7 +41,7 @@ app.post("/api/parse", async (c) => {
   }
 
   try {
-    return c.json(parseMigration(sql));
+    return c.json(await parseMigration(sql));
   } catch (error) {
     if (error instanceof MigrationParseError) {
       return c.json({ error: error.message }, 400);

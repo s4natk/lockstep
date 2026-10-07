@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
+    "test": "node test/api.test.mjs",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
