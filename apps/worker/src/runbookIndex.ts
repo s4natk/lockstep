@@ -30,9 +30,9 @@ export function searchRunbooks(
   query: string,
   limit = 3,
 ): SearchableChunk[] {
-  const queryTokens = tokens(query);
+  const queryTokens = indexTokens(query);
   return chunks
-    .map((chunk) => ({ chunk, score: overlap(queryTokens, tokens(chunk.text)) }))
+    .map((chunk) => ({ chunk, score: overlap(queryTokens, indexTokens(chunk.text)) }))
     .filter((entry) => entry.score > 0)
     .sort((left, right) => {
       if (right.score !== left.score) {
@@ -44,7 +44,7 @@ export function searchRunbooks(
     .map((entry) => entry.chunk);
 }
 
-function tokens(value: string): string[] {
+export function indexTokens(value: string): string[] {
   return value
     .toLowerCase()
     .split(/[^a-z0-9]+/)

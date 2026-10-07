@@ -20,6 +20,18 @@ pnpm --filter @lockstep/worker exec wrangler d1 execute lockstep --local --file=
 
 That applies `schema.sql` to the local SQLite database. Replace `database_id` with the id from `wrangler d1 create lockstep` when you deploy. Vectorize and a paid Workers plan are not required to run `/health` and `/api/parse` locally.
 
+## Vectorize
+
+Hybrid search uses the `VECTORIZE` binding when it is present and a local cosine index otherwise. Leave the binding out for local dev. Add it after creating a 64-dimension cosine index:
+
+```toml
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "lockstep-runbooks"
+```
+
+Without `OPENAI_API_KEY`, embeddings are a deterministic local hash, not an OpenAI call.
+
 ## Parse
 
 ```text
