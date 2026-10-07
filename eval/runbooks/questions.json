@@ -1,0 +1,62 @@
+[
+  {
+    "query": "How do I build an index without locking writes?",
+    "chunkId": "concurrent-index"
+  },
+  {
+    "query": "What happens if I add a NOT NULL column without a default?",
+    "chunkId": "add-not-null"
+  },
+  {
+    "query": "Does SET NOT NULL scan existing rows?",
+    "chunkId": "set-not-null"
+  },
+  {
+    "query": "What does DROP COLUMN do to stored values?",
+    "chunkId": "drop-column"
+  },
+  {
+    "query": "What does DROP TABLE delete?",
+    "chunkId": "drop-table"
+  },
+  {
+    "query": "Does TRUNCATE delete every row?",
+    "chunkId": "truncate"
+  },
+  {
+    "query": "When does ALTER COLUMN TYPE rewrite the table?",
+    "chunkId": "alter-type"
+  },
+  {
+    "query": "Is a constant DEFAULT metadata-only?",
+    "chunkId": "constant-default"
+  },
+  {
+    "query": "Does ADD COLUMN PRIMARY KEY lock writes?",
+    "chunkId": "primary-key"
+  },
+  {
+    "query": "Does CREATE UNIQUE INDEX lock writes?",
+    "chunkId": "unique-index"
+  },
+  {
+    "query": "Is a nullable column add metadata-only?",
+    "chunkId": "nullable-add"
+  },
+  {
+    "query": "What does DROP COLUMN IF EXISTS do?",
+    "chunkId": "drop-if-exists"
+  },
+  {
+    "query": "What is a USING expression for?",
+    "chunkId": "type-using"
+  },
+  {
+    "query": "Why set lock_timeout before DDL?",
+    "chunkId": "lock-timeout"
+  },
+  {
+    "query": "What is expand and contract?",
+    "chunkId": "expand-contract"
+  }
+]

@@ -1,6 +1,6 @@
 # Eval fixtures
 
-`sql_guard` checks the migration files in `migrations/`. Runbook chunks are not here yet. No accuracy number belongs in this file until a retrieval run prints one.
+`sql_guard` checks the migration files in `migrations/`. Keyword search over `runbooks/` is checked by the Worker test. Hybrid recall is still empty until that eval script prints a number.
 
 ## Migrations
 
