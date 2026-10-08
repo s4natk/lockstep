@@ -3,6 +3,7 @@ import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import type { Citation, Hazard, ParseResult, RunbookChunk } from "@lockstep/shared";
 
 import { checkCitations } from "./citationCheck.js";
+import { streamOpenAiChat } from "./openaiChat.js";
 
 const ReviewState = Annotation.Root({
   sql: Annotation<string>,
@@ -43,24 +44,40 @@ export interface DraftInput {
 }
 
 export interface ReviewModel {
-  draft(input: DraftInput): Promise<string>;
+  stream(input: DraftInput): AsyncIterable<string>;
 }
 
 export interface ReviewGraphDeps {
   parse: (sql: string) => Promise<ParseResult>;
   search: (query: string) => Promise<RunbookChunk[]>;
   model: ReviewModel;
+  onToken?: (token: string) => void;
 }
 
 export function mockReviewModel(): ReviewModel {
   return {
-    async draft({ hazards, chunks }) {
-      const sentences = [
-        ...hazards.map((hazard) => withPeriod(hazard.reason)),
-        ...chunks.map((chunk) => firstSentence(chunk.text)),
+    async *stream(input) {
+      const text = [
+        ...input.hazards.map((hazard) => withPeriod(hazard.reason)),
+        ...input.chunks.map((chunk) => firstSentence(chunk.text)),
         "Ship this on Friday without a backup.",
-      ];
-      return sentences.join(" ");
+      ].join(" ");
+      for (const part of text.split(/(\s+)/)) {
+        if (part.length > 0) {
+          yield part;
+        }
+      }
+    },
+  };
+}
+
+export function createReviewModel(apiKey: string | undefined, fetchImpl: typeof fetch = fetch): ReviewModel {
+  if (apiKey === undefined || apiKey === "") {
+    return mockReviewModel();
+  }
+  return {
+    async *stream(input) {
+      yield* streamOpenAiChat({ apiKey, prompt: input.prompt, fetchImpl });
     },
   };
 }
@@ -82,11 +99,15 @@ export function compileReviewGraph(deps: ReviewGraphDeps) {
         runbooks: state.chunks.map((chunk) => `[${chunk.id}] ${chunk.text}`).join("\n\n") || "none",
       });
       const prompt = formatted.map((message) => messageText(message.content)).join("\n");
-      const draft = await deps.model.draft({
+      let draft = "";
+      for await (const token of deps.model.stream({
         prompt,
         hazards: state.hazards,
         chunks: state.chunks,
-      });
+      })) {
+        draft += token;
+        deps.onToken?.(token);
+      }
       const checked = checkCitations({
         note: draft,
         hazards: state.hazards,
@@ -106,8 +127,59 @@ export function compileReviewGraph(deps: ReviewGraphDeps) {
     .compile();
 }
 
+export type ReviewStreamEvent =
+  | { type: "token"; content: string }
+  | { type: "done"; note: string; citations: Citation[]; dropped: string[] };
+
+export async function* streamReview(
+  sql: string,
+  deps: ReviewGraphDeps,
+): AsyncGenerator<ReviewStreamEvent> {
+  const queue = createQueue<ReviewStreamEvent>();
+  const pending = compileReviewGraph({
+    ...deps,
+    onToken(token) {
+      queue.push({ type: "token", content: token });
+    },
+  })
+    .invoke({ sql })
+    .then((state) => {
+      queue.push({
+        type: "done",
+        note: state.note,
+        citations: state.citations,
+        dropped: state.dropped,
+      });
+      queue.close();
+    })
+    .catch((error: unknown) => {
+      queue.fail(error);
+    });
+
+  try {
+    while (true) {
+      const next = await queue.next();
+      if (next.done) {
+        break;
+      }
+      yield next.value;
+    }
+  } finally {
+    await pending.catch(() => undefined);
+  }
+}
+
 export async function reviewMigration(sql: string, deps: ReviewGraphDeps) {
-  return compileReviewGraph(deps).invoke({ sql });
+  let done: Extract<ReviewStreamEvent, { type: "done" }> | undefined;
+  for await (const event of streamReview(sql, deps)) {
+    if (event.type === "done") {
+      done = event;
+    }
+  }
+  if (done === undefined) {
+    throw new Error("review stream ended without a result");
+  }
+  return done;
 }
 
 export function citationsFor(hazards: Hazard[], chunks: RunbookChunk[], draft: string): Citation[] {
@@ -159,4 +231,55 @@ function messageText(content: unknown): string {
       .join("");
   }
   return "";
+}
+
+function createQueue<T>() {
+  const items: T[] = [];
+  let waiting: {
+    resolve: (result: IteratorResult<T>) => void;
+    reject: (error: unknown) => void;
+  } | undefined;
+  let closed = false;
+  let failure: unknown;
+
+  return {
+    push(value: T) {
+      if (closed) {
+        return;
+      }
+      if (waiting) {
+        const current = waiting;
+        waiting = undefined;
+        current.resolve({ value, done: false });
+        return;
+      }
+      items.push(value);
+    },
+    close() {
+      closed = true;
+      waiting?.resolve({ value: undefined as T, done: true });
+      waiting = undefined;
+    },
+    fail(error: unknown) {
+      failure = error;
+      closed = true;
+      waiting?.reject(error);
+      waiting = undefined;
+    },
+    next(): Promise<IteratorResult<T>> {
+      const value = items.shift();
+      if (value !== undefined) {
+        return Promise.resolve({ value, done: false });
+      }
+      if (failure !== undefined) {
+        return Promise.reject(failure);
+      }
+      if (closed) {
+        return Promise.resolve({ value: undefined as T, done: true });
+      }
+      return new Promise((resolve, reject) => {
+        waiting = { resolve, reject };
+      });
+    },
+  };
 }

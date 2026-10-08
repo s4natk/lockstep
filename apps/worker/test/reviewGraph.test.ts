@@ -2,12 +2,18 @@ import assert from "node:assert/strict";
 
 import { createEmbedder } from "../src/embeddings.ts";
 import { hybridSearch } from "../src/hybridSearch.ts";
-import { mockReviewModel, reviewMigration } from "../src/reviewGraph.ts";
+import { mockReviewModel, streamReview } from "../src/reviewGraph.ts";
 import { runbookChunks } from "../src/runbookChunks.ts";
 
 let prompt = "";
+let result: {
+  note: string;
+  dropped: string[];
+  citations: Array<{ kind: string; sourceId: string }>;
+} | undefined;
 const model = mockReviewModel();
-const result = await reviewMigration("DROP TABLE sessions", {
+const tokens: string[] = [];
+for await (const event of streamReview("DROP TABLE sessions", {
   parse: async () => ({
     statements: [
       { index: 0, sql: "DROP TABLE sessions", start: 0, end: 19 },
@@ -31,13 +37,23 @@ const result = await reviewMigration("DROP TABLE sessions", {
       limit: 3,
     }),
   model: {
-    async draft(input) {
+    stream(input) {
       prompt = input.prompt;
-      return model.draft(input);
+      return model.stream(input);
     },
   },
-});
+})) {
+  if (event.type === "token") {
+    tokens.push(event.content);
+  }
+  if (event.type === "done") {
+    result = event;
+  }
+}
 
+assert.ok(result);
+assert.ok(tokens.length > 1);
+assert.match(tokens.join(""), /DROP TABLE deletes the table and its rows/);
 assert.match(prompt, /DROP TABLE deletes the table and its rows/);
 assert.match(result.note, /DROP TABLE deletes the table and its rows/);
 assert.equal(result.note.includes("Friday"), false);
