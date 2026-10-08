@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "test": "node test/api.test.mjs && node --experimental-strip-types --import ./test/register-ts.mjs test/runbooks.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/hybrid.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/citationCheck.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/reviewGraph.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/openaiChat.test.ts",
+    "eval:retrieval": "node --experimental-strip-types --import ./test/register-ts.mjs scripts/evalRetrieval.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
@@ -17,6 +18,8 @@
     "@langchain/core": "^1.2.17",
     "@langchain/langgraph": "^1.4.20",
     "@lockstep/shared": "workspace:*",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/sdk-trace-base": "^2.12.0",
     "hono": "^4.13.12"
   }
 }

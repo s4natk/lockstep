@@ -10,6 +10,7 @@ let result: {
   note: string;
   dropped: string[];
   citations: Array<{ kind: string; sourceId: string }>;
+  trace: { spans: Array<{ name: string }> };
 } | undefined;
 const model = mockReviewModel();
 const tokens: string[] = [];
@@ -66,3 +67,10 @@ assert.equal(
   result.citations.some((citation) => citation.kind === "runbook" && citation.sourceId === "drop-table"),
   true,
 );
+for (const name of ["wasm.parse", "retrieval.hybrid", "retrieval.embed", "review.draft"]) {
+  assert.equal(
+    result.trace.spans.some((span) => span.name === name),
+    true,
+    name,
+  );
+}

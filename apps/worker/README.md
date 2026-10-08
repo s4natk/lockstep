@@ -45,3 +45,5 @@ A blank `sql` field, a non-JSON body, or SQL the parser rejects returns `400` an
 ```text
 pnpm --filter @lockstep/worker test
 ```
+
+Retrieval recall is printed by `pnpm --filter @lockstep/worker eval:retrieval`. The line says `local-hash` or `openai` so the number is tied to the embedder that ran. It is not copied into this file ahead of a run.

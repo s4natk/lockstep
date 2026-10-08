@@ -1,5 +1,6 @@
 import type { Embedder } from "./embeddings.js";
 import { searchRunbooks, type SearchableChunk } from "./runbookIndex.js";
+import { withSpan } from "./tracing.js";
 
 const RRF_K = 60;
 
@@ -42,9 +43,12 @@ export async function hybridSearch(options: {
   const keywordIds = searchRunbooks(options.chunks, options.query, options.chunks.length).map(
     (chunk) => chunk.id,
   );
-  const vectorIds = options.vectorize
-    ? await vectorizeIds(options.vectorize, options.embedder, options.query, limit)
-    : await localVectorIds(options.chunks, options.embedder, options.query);
+  const vectorize = options.vectorize;
+  const vectorIds = vectorize
+    ? await withSpan("retrieval.vectorize", () =>
+        vectorizeIds(vectorize, options.embedder, options.query, limit),
+      )
+    : await withSpan("retrieval.embed", () => localVectorIds(options.chunks, options.embedder, options.query));
   const fused = reciprocalRankFusion([keywordIds, vectorIds]).slice(0, limit);
   const byId = new Map(options.chunks.map((chunk) => [chunk.id, chunk]));
   return fused.flatMap((id) => {

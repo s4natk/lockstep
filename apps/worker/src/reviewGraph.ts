@@ -4,6 +4,7 @@ import type { Citation, Hazard, ParseResult, RunbookChunk } from "@lockstep/shar
 
 import { checkCitations } from "./citationCheck.js";
 import { streamOpenAiChat } from "./openaiChat.js";
+import { traceMark, traceSince, withSpan, type TraceSummary } from "./tracing.js";
 
 const ReviewState = Annotation.Root({
   sql: Annotation<string>,
@@ -85,12 +86,12 @@ export function createReviewModel(apiKey: string | undefined, fetchImpl: typeof 
 export function compileReviewGraph(deps: ReviewGraphDeps) {
   return new StateGraph(ReviewState)
     .addNode("parse_migration", async (state) => {
-      const parsed = await deps.parse(state.sql);
+      const parsed = await withSpan("wasm.parse", () => deps.parse(state.sql));
       return { hazards: parsed.hazards };
     })
     .addNode("search_runbooks", async (state) => {
       const query = state.hazards.map((hazard) => hazard.reason).join(" ") || state.sql;
-      return { chunks: await deps.search(query) };
+      return { chunks: await withSpan("retrieval.hybrid", () => deps.search(query)) };
     })
     .addNode("draft", async (state) => {
       const formatted = await draftPrompt.formatMessages({
@@ -99,15 +100,18 @@ export function compileReviewGraph(deps: ReviewGraphDeps) {
         runbooks: state.chunks.map((chunk) => `[${chunk.id}] ${chunk.text}`).join("\n\n") || "none",
       });
       const prompt = formatted.map((message) => messageText(message.content)).join("\n");
-      let draft = "";
-      for await (const token of deps.model.stream({
-        prompt,
-        hazards: state.hazards,
-        chunks: state.chunks,
-      })) {
-        draft += token;
-        deps.onToken?.(token);
-      }
+      const draft = await withSpan("review.draft", async () => {
+        let text = "";
+        for await (const token of deps.model.stream({
+          prompt,
+          hazards: state.hazards,
+          chunks: state.chunks,
+        })) {
+          text += token;
+          deps.onToken?.(token);
+        }
+        return text;
+      });
       const checked = checkCitations({
         note: draft,
         hazards: state.hazards,
@@ -129,12 +133,19 @@ export function compileReviewGraph(deps: ReviewGraphDeps) {
 
 export type ReviewStreamEvent =
   | { type: "token"; content: string }
-  | { type: "done"; note: string; citations: Citation[]; dropped: string[] };
+  | {
+      type: "done";
+      note: string;
+      citations: Citation[];
+      dropped: string[];
+      trace: TraceSummary;
+    };
 
 export async function* streamReview(
   sql: string,
   deps: ReviewGraphDeps,
 ): AsyncGenerator<ReviewStreamEvent> {
+  const mark = traceMark();
   const queue = createQueue<ReviewStreamEvent>();
   const pending = compileReviewGraph({
     ...deps,
@@ -149,6 +160,7 @@ export async function* streamReview(
         note: state.note,
         citations: state.citations,
         dropped: state.dropped,
+        trace: traceSince(mark),
       });
       queue.close();
     })
