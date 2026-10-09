@@ -40,12 +40,29 @@ export class SessionRepository {
   constructor(private readonly db: Env["DB"]) {}
 
   async insert(session: NewSession): Promise<void> {
+    await this.ensureSchema();
     const createdAt = session.createdAt ?? new Date().toISOString();
     await this.db
       .prepare(
-        `INSERT INTO sessions (${COLUMNS}) VALUES (?, ?, ?, NULL, ?, NULL, NULL)`,
+        `INSERT OR REPLACE INTO sessions (${COLUMNS}) VALUES (?, ?, ?, NULL, ?, NULL, NULL)`,
       )
       .bind(session.id, createdAt, session.sql, session.parseJson)
+      .run();
+  }
+
+  async ensureSchema(): Promise<void> {
+    await this.db
+      .prepare(
+        `CREATE TABLE IF NOT EXISTS sessions (
+          id TEXT PRIMARY KEY,
+          created_at TEXT NOT NULL,
+          sql TEXT NOT NULL,
+          note TEXT,
+          parse_json TEXT,
+          citations_json TEXT,
+          trace_json TEXT
+        )`,
+      )
       .run();
   }
 

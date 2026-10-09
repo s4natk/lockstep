@@ -40,6 +40,10 @@ curl -s http://localhost:8787/api/parse -H "content-type: application/json" -d "
 
 A blank `sql` field, a non-JSON body, or SQL the parser rejects returns `400` and `{ "error": "..." }`.
 
+## Review session
+
+Connect a WebSocket to `/agent/connect/:sessionId` and send `{ "type": "review", "sql": "..." }`. The socket sends the parser JSON first, then `{ "type": "token" }` messages, then `{ "type": "done" }` with the checked note. The Durable Object writes that review to D1. `GET /api/sessions/:id` reads it back.
+
 ## Tests
 
 ```text

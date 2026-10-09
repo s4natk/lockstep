@@ -6,3 +6,12 @@ compatibility_date = "2026-10-04"
 binding = "DB"
 database_name = "lockstep"
 database_id = "00000000-0000-0000-0000-000000000000"
+
+[durable_objects]
+bindings = [
+  { name = "SESSION", class_name = "ReviewSession" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ReviewSession"]

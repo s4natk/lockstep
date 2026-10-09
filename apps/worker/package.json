@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "test": "node test/api.test.mjs && node --experimental-strip-types --import ./test/register-ts.mjs test/runbooks.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/hybrid.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/citationCheck.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/reviewGraph.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/openaiChat.test.ts",
+    "test": "node test/api.test.mjs && node test/session.test.mjs && node --experimental-strip-types --import ./test/register-ts.mjs test/runbooks.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/hybrid.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/citationCheck.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/reviewGraph.test.ts && node --experimental-strip-types --import ./test/register-ts.mjs test/openaiChat.test.ts",
     "eval:retrieval": "node --experimental-strip-types --import ./test/register-ts.mjs scripts/evalRetrieval.ts",
     "typecheck": "tsc --noEmit"
   },

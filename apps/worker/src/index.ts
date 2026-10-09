@@ -1,9 +1,12 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
+import type { Env } from "./env.js";
 import { parseMigration, MigrationParseError } from "./parser.js";
+import { ReviewSession } from "./reviewSession.js";
+import { SessionRepository } from "./sessionRepository.js";
 
-const app = new Hono();
+const app = new Hono<{ Bindings: Env }>();
 
 app.use(
   "*",
@@ -50,4 +53,20 @@ app.post("/api/parse", async (c) => {
   }
 });
 
+app.get("/agent/connect/:sessionId", (c) => {
+  const id = c.env.SESSION.idFromName(c.req.param("sessionId"));
+  return c.env.SESSION.get(id).fetch(c.req.raw);
+});
+
+app.get("/api/sessions/:id", async (c) => {
+  const sessions = new SessionRepository(c.env.DB);
+  await sessions.ensureSchema();
+  const session = await sessions.findById(c.req.param("id"));
+  if (session === null) {
+    return c.json({ error: "not found" }, 404);
+  }
+  return c.json(session);
+});
+
+export { ReviewSession };
 export default app;
