@@ -8,6 +8,10 @@ import { traceMark, traceSince, withSpan, type TraceSummary } from "./tracing.js
 
 const ReviewState = Annotation.Root({
   sql: Annotation<string>,
+  context: Annotation<string[]>({
+    reducer: (_left, right) => right,
+    default: () => [],
+  }),
   hazards: Annotation<Hazard[]>({
     reducer: (_left, right) => right,
     default: () => [],
@@ -33,7 +37,7 @@ const ReviewState = Annotation.Root({
 export const draftPrompt = ChatPromptTemplate.fromMessages([
   [
     "system",
-    "You write a Postgres rollout note. Describe only hazards the parser returned. Every sentence must quote a parser reason or a runbook chunk exactly.",
+    "You write a Postgres rollout note. Describe only hazards the parser returned. Every sentence must quote a parser reason, a runbook chunk, or a user context snippet exactly. User context is included with the runbooks and labeled context-N.",
   ],
   ["human", "SQL:\n{sql}\n\nHazards:\n{hazards}\n\nRunbooks:\n{runbooks}"],
 ]);
@@ -91,7 +95,9 @@ export function compileReviewGraph(deps: ReviewGraphDeps) {
     })
     .addNode("search_runbooks", async (state) => {
       const query = state.hazards.map((hazard) => hazard.reason).join(" ") || state.sql;
-      return { chunks: await withSpan("retrieval.hybrid", () => deps.search(query)) };
+      const retrieved = await withSpan("retrieval.hybrid", () => deps.search(query));
+      const extra = state.context.map((text, index) => ({ id: `context-${index}`, text }));
+      return { chunks: [...extra, ...retrieved] };
     })
     .addNode("draft", async (state) => {
       const formatted = await draftPrompt.formatMessages({
@@ -144,16 +150,18 @@ export type ReviewStreamEvent =
 export async function* streamReview(
   sql: string,
   deps: ReviewGraphDeps,
+  context: readonly string[] = [],
 ): AsyncGenerator<ReviewStreamEvent> {
   const mark = traceMark();
   const queue = createQueue<ReviewStreamEvent>();
+  const userContext = normalizeContext(context);
   const pending = compileReviewGraph({
     ...deps,
     onToken(token) {
       queue.push({ type: "token", content: token });
     },
   })
-    .invoke({ sql })
+    .invoke({ sql, context: userContext })
     .then((state) => {
       queue.push({
         type: "done",
@@ -181,9 +189,13 @@ export async function* streamReview(
   }
 }
 
-export async function reviewMigration(sql: string, deps: ReviewGraphDeps) {
+export async function reviewMigration(
+  sql: string,
+  deps: ReviewGraphDeps,
+  context: readonly string[] = [],
+) {
   let done: Extract<ReviewStreamEvent, { type: "done" }> | undefined;
-  for await (const event of streamReview(sql, deps)) {
+  for await (const event of streamReview(sql, deps, context)) {
     if (event.type === "done") {
       done = event;
     }
@@ -209,10 +221,18 @@ export function citationsFor(hazards: Hazard[], chunks: RunbookChunk[], draft: s
   for (const chunk of chunks) {
     const quote = firstSentence(chunk.text).replace(/[.!?]$/, "");
     if (quote.length > 0 && draft.includes(quote)) {
-      citations.push({ kind: "runbook", quote, sourceId: chunk.id });
+      citations.push({
+        kind: chunk.id.startsWith("context-") ? "context" : "runbook",
+        quote,
+        sourceId: chunk.id,
+      });
     }
   }
   return citations;
+}
+
+function normalizeContext(context: readonly string[]): string[] {
+  return context.map((entry) => entry.trim()).filter((entry) => entry.length > 0);
 }
 
 function withPeriod(text: string): string {

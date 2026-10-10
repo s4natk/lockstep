@@ -18,9 +18,16 @@ app.use(
 );
 
 app.get("/health", (c) => {
+  const key = c.env.OPENAI_API_KEY;
+  const configured = key !== undefined && key.trim() !== "";
   return c.json({
     ok: true,
     timestamp: new Date().toISOString(),
+    openai: {
+      configured,
+      chatModel: "gpt-4.1-mini",
+      mode: configured ? "live" : "mock",
+    },
   });
 });
 

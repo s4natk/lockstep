@@ -55,3 +55,17 @@ const [fromVectorize] = await hybridSearch({
 });
 assert.equal(fromVectorize?.id, "lock-timeout");
 assert.equal(fetches, 0);
+
+const unavailable = {
+  async query(): Promise<{ matches: Array<{ id: string }> }> {
+    throw new Error("Binding VECTORIZE needs to be run remotely");
+  },
+};
+const [fallback] = await hybridSearch({
+  chunks,
+  query: "DROP TABLE deletes the table and its rows",
+  embedder,
+  vectorize: unavailable,
+  limit: 3,
+});
+assert.equal(fallback?.id, "drop-table");

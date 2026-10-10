@@ -19,6 +19,8 @@ try {
   const healthBody = await health.json();
   assert.equal(healthBody.ok, true);
   assert.equal(typeof healthBody.timestamp, "string");
+  assert.equal(healthBody.openai.configured, false);
+  assert.equal(healthBody.openai.mode, "mock");
 
   const missing = await worker.fetch("http://localhost/api/parse", {
     method: "POST",

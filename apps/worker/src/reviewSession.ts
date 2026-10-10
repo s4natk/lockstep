@@ -1,9 +1,12 @@
+import { streamAssistantReply } from "./assistantChat.js";
 import { createEmbedder } from "./embeddings.js";
 import type { Env } from "./env.js";
 import { hybridSearch } from "./hybridSearch.js";
-import { createReviewModel, streamReview } from "./reviewGraph.js";
+import { looksLikeMigration } from "./migrationDetect.js";
 import { parseMigration, MigrationParseError } from "./parser.js";
+import { createReviewModel, streamReview } from "./reviewGraph.js";
 import { runbookChunks } from "./runbookChunks.js";
+import { readSessionMessage } from "./sessionMessage.js";
 import { SessionRepository } from "./sessionRepository.js";
 
 export class ReviewSession implements DurableObject {
@@ -32,60 +35,79 @@ export class ReviewSession implements DurableObject {
   }
 
   private async onMessage(server: WebSocket, sessionId: string, raw: string): Promise<void> {
-    let sql = "";
-    try {
-      const message: unknown = JSON.parse(raw);
-      if (
-        typeof message === "object" &&
-        message !== null &&
-        "sql" in message &&
-        typeof message.sql === "string"
-      ) {
-        sql = message.sql;
-      }
-    } catch {
-      send(server, { type: "error", error: "Request body must be JSON." });
+    const request = readSessionMessage(raw);
+    if ("error" in request) {
+      send(server, { type: "error", error: request.error });
       return;
     }
-    if (sql.trim() === "") {
-      send(server, { type: "error", error: "sql is required" });
+    const { text, context } = request;
+
+    if (!looksLikeMigration(text)) {
+      await this.runChat(server, sessionId, text);
       return;
     }
 
     try {
-      const parsed = await parseMigration(sql);
-      send(server, { type: "parse", sessionId, result: parsed });
-      await this.sessions.insert({
-        id: sessionId,
-        sql,
-        parseJson: JSON.stringify(parsed),
-      });
-      for await (const event of streamReview(sql, {
-        parse: async () => parsed,
-        search: (query) =>
-          hybridSearch({
-            chunks: runbookChunks,
-            query,
-            embedder: createEmbedder(this.env.OPENAI_API_KEY),
-            vectorize: this.env.VECTORIZE,
-            limit: 3,
-          }),
-        model: createReviewModel(this.env.OPENAI_API_KEY),
-      })) {
-        if (event.type === "token") {
-          send(server, { type: "token", content: event.content });
-          continue;
-        }
-        await this.sessions.saveReview(sessionId, {
-          note: event.note,
-          citationsJson: JSON.stringify(event.citations),
-          traceJson: JSON.stringify(event.trace),
-        });
-        send(server, { ...event, sessionId });
-      }
+      await this.runReview(server, sessionId, text, context);
     } catch (error) {
-      const message = error instanceof MigrationParseError ? error.message : "The review failed.";
-      send(server, { type: "error", error: message });
+      if (error instanceof MigrationParseError) {
+        await this.runChat(server, sessionId, text);
+        return;
+      }
+      send(server, { type: "error", error: "The review failed." });
+    }
+  }
+
+  private async runChat(server: WebSocket, sessionId: string, text: string): Promise<void> {
+    send(server, { type: "intent", intent: "chat", sessionId });
+    let reply = "";
+    try {
+      for await (const token of streamAssistantReply(text, this.env.OPENAI_API_KEY)) {
+        reply += token;
+        send(server, { type: "token", content: token });
+      }
+      send(server, { type: "done", sessionId, intent: "chat", reply });
+    } catch {
+      send(server, { type: "error", error: "The assistant could not respond. Check OPENAI_API_KEY." });
+    }
+  }
+
+  private async runReview(
+    server: WebSocket,
+    sessionId: string,
+    sql: string,
+    context: string[],
+  ): Promise<void> {
+    send(server, { type: "intent", intent: "review", sessionId });
+    const parsed = await parseMigration(sql);
+    send(server, { type: "parse", sessionId, result: parsed });
+    await this.sessions.insert({
+      id: sessionId,
+      sql,
+      parseJson: JSON.stringify(parsed),
+    });
+    for await (const event of streamReview(sql, {
+      parse: async () => parsed,
+      search: (query) =>
+        hybridSearch({
+          chunks: runbookChunks,
+          query,
+          embedder: createEmbedder(this.env.OPENAI_API_KEY),
+          vectorize: this.env.VECTORIZE,
+          limit: 3,
+        }),
+      model: createReviewModel(this.env.OPENAI_API_KEY),
+    }, context)) {
+      if (event.type === "token") {
+        send(server, { type: "token", content: event.content });
+        continue;
+      }
+      await this.sessions.saveReview(sessionId, {
+        note: event.note,
+        citationsJson: JSON.stringify(event.citations),
+        traceJson: JSON.stringify(event.trace),
+      });
+      send(server, { ...event, sessionId, intent: "review" });
     }
   }
 }

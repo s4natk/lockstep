@@ -11,7 +11,7 @@ const worker = await unstable_dev("src/index.ts", {
 });
 
 try {
-  const sessionId = `sess-drop-${Date.now()}`;
+  const sessionId = `sess-chat-${Date.now()}`;
   const socket = new WebSocket(`ws://127.0.0.1:${worker.port}/agent/connect/${sessionId}`);
   const messages = [];
   const done = new Promise((resolve, reject) => {
@@ -25,32 +25,17 @@ try {
         reject(new Error(message.error));
       }
     });
-    socket.addEventListener("error", () => {
-      reject(new Error("websocket failed"));
-    });
+    socket.addEventListener("error", () => reject(new Error("websocket failed")));
   });
   await new Promise((resolve, reject) => {
     socket.addEventListener("open", resolve);
     socket.addEventListener("error", () => reject(new Error("websocket failed to open")));
   });
-  socket.send(JSON.stringify({ type: "review", sql: "DROP TABLE sessions" }));
+  socket.send(JSON.stringify({ type: "message", text: "hi" }));
   const result = await done;
-
-  assert.equal(messages[0].type, "intent");
-  assert.equal(messages[0].intent, "review");
-  const parsed = messages.find((message) => message.type === "parse");
-  assert.ok(parsed);
-  assert.equal(parsed.result.hazards[0].code, "data_loss");
-  assert.ok(messages.some((message) => message.type === "token"));
-  assert.match(result.note, /DROP TABLE deletes the table and its rows/);
-  assert.equal(result.note.includes("Friday"), false);
-
-  const saved = await worker.fetch(`http://localhost/api/sessions/${sessionId}`);
-  assert.equal(saved.status, 200);
-  const session = await saved.json();
-  assert.equal(session.id, sessionId);
-  assert.match(session.note, /DROP TABLE deletes the table and its rows/);
-  assert.match(session.parseJson, /data_loss/);
+  assert.equal(messages.some((message) => message.type === "intent" && message.intent === "chat"), true);
+  assert.equal(result.intent, "chat");
+  assert.match(result.reply, /Lockstep/i);
   socket.close();
 } finally {
   await worker.stop();

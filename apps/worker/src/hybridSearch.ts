@@ -45,9 +45,7 @@ export async function hybridSearch(options: {
   );
   const vectorize = options.vectorize;
   const vectorIds = vectorize
-    ? await withSpan("retrieval.vectorize", () =>
-        vectorizeIds(vectorize, options.embedder, options.query, limit),
-      )
+    ? await vectorIdsOrLocal(vectorize, options.chunks, options.embedder, options.query, limit)
     : await withSpan("retrieval.embed", () => localVectorIds(options.chunks, options.embedder, options.query));
   const fused = reciprocalRankFusion([keywordIds, vectorIds]).slice(0, limit);
   const byId = new Map(options.chunks.map((chunk) => [chunk.id, chunk]));
@@ -55,6 +53,20 @@ export async function hybridSearch(options: {
     const chunk = byId.get(id);
     return chunk === undefined ? [] : [chunk];
   });
+}
+
+async function vectorIdsOrLocal(
+  vectorize: VectorSearch,
+  chunks: SearchableChunk[],
+  embedder: Embedder,
+  query: string,
+  limit: number,
+): Promise<string[]> {
+  try {
+    return await withSpan("retrieval.vectorize", () => vectorizeIds(vectorize, embedder, query, limit));
+  } catch {
+    return withSpan("retrieval.embed", () => localVectorIds(chunks, embedder, query));
+  }
 }
 
 async function vectorizeIds(
