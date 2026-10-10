@@ -1,6 +1,6 @@
 import type { Hazard } from "./parse.js";
 
-export type CitationKind = "parser" | "runbook";
+export type CitationKind = "parser" | "runbook" | "context";
 
 export interface Citation {
   kind: CitationKind;

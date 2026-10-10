@@ -17,12 +17,12 @@ The public URLs below are filled in after you deploy. Nothing in this repo is on
 Lockstep is an edge review agent:
 
 - **Parses migrations** with Rust compiled to WebAssembly (`sqlparser`, Postgres dialect only). Hazard labels come from the parser, not from the model.
-- **Retrieves runbooks** with hybrid search: keyword rank plus cosine similarity, fused with reciprocal rank fusion. Cloudflare Vectorize is used when the `VECTORIZE` binding exists. Otherwise the Worker scores the bundled runbooks in memory.
+- **Retrieves runbooks** with hybrid search: keyword rank plus cosine similarity, fused with reciprocal rank fusion. Cloudflare Vectorize is used when the `VECTORIZE` binding exists and the query succeeds. If the binding is missing or the query fails, the Worker scores the bundled runbooks in memory.
 - **Drafts a rollout note** with LangGraph and a `ChatPromptTemplate`. `gpt-4.1-mini` streams the note when `OPENAI_API_KEY` is set. Without a key, a mock model quotes the parser and the retrieved chunks.
-- **Drops uncited sentences.** A quote must appear in the parser output or a retrieved runbook.
+- **Drops uncited sentences.** A quote must appear in the parser output, a retrieved runbook, or added user context.
 - **Streams tokens** over a WebSocket on a Durable Object, then stores the session in D1.
 - **Traces** `wasm.parse`, `retrieval.hybrid`, `retrieval.embed`, and `review.draft` with OpenTelemetry.
-- **Serves a Next.js page** with the parser JSON beside the note.
+- **Serves a Next.js chat page** with a context rail beside a streaming rollout note.
 
 **Measured retrieval:** local-hash embedder, recall at 3, **15/15** on 15 runbook questions (`pnpm eval:retrieval`). That number is not an OpenAI embeddings score. The OpenAI row has not been measured. Parser labels are a separate suite: **25** migrations, checked by `cargo test`.
 
@@ -31,9 +31,9 @@ Lockstep is an edge review agent:
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                     Next.js review page                         │
-│   • WebSocket client                                            │
-│   • Parser JSON beside the streaming note                      │
-│   • Citations and OpenTelemetry footer                          │
+│   • Dark chat shell and context rail                            │
+│   • Streaming rollout note over WebSocket                       │
+│   • Hazards, citations, and trace under the note                │
 └───────────────────────────┬─────────────────────────────────────┘
                             │  WebSocket
                             ▼
@@ -127,7 +127,7 @@ Not deployed yet. After the steps in Installation & Deployment, replace the two 
 DROP TABLE sessions;
 ```
 
-**Expected:** Parser JSON shows `data_loss`. The note quotes `DROP TABLE deletes the table and its rows.` The citation list includes `statement:0` and the `drop-table` runbook. The trace footer lists `wasm.parse`, a retrieval span, and `review.draft`.
+**Expected:** The note quotes `DROP TABLE deletes the table and its rows.` The details strip shows hazard `data_loss`, citations for `statement:0` and the `drop-table` runbook, and trace spans `wasm.parse`, a retrieval span, and `review.draft`.
 
 #### 2. Rewrite a column type
 
@@ -305,10 +305,10 @@ Returns the stored review, or `404`.
 
 ### `WS /agent/connect/:sessionId`
 
-Client to server:
+Client to server. `context` is optional. Each string is extra grounding, labeled `context-0`, `context-1`, and so on.
 
 ```json
-{"type": "review", "sql": "DROP TABLE sessions"}
+{"type": "review", "sql": "DROP TABLE sessions", "context": ["Require a backup before this drop."]}
 ```
 
 Server to client:
@@ -340,7 +340,7 @@ lockstep/
 │   └── web/                    # Next.js review page
 │       └── src/
 │           ├── app/
-│           ├── components/ReviewPanel.tsx
+│           ├── components/AppShell.tsx
 │           └── lib/worker.ts
 ├── packages/
 │   ├── sql_guard/              # Rust DDL classifier and Wasm package

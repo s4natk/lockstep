@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata = {
   title: "Lockstep",
-  description: "Review a SQL migration before it ships.",
+  description: "Paste a Postgres migration and get a grounded rollout note.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

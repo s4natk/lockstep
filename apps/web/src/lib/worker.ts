@@ -12,3 +12,24 @@ export function reviewSocketUrl(sessionId: string): string {
   url.hash = "";
   return url.toString();
 }
+
+export interface WorkerHealth {
+  ok: boolean;
+  openai?: {
+    configured: boolean;
+    chatModel: string;
+    mode: "live" | "mock";
+  };
+}
+
+export async function fetchWorkerHealth(): Promise<WorkerHealth | null> {
+  try {
+    const response = await fetch(`${workerHttpUrl()}/health`, { cache: "no-store" });
+    if (!response.ok) {
+      return null;
+    }
+    return (await response.json()) as WorkerHealth;
+  } catch {
+    return null;
+  }
+}
