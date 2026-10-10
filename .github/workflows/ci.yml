@@ -19,3 +19,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r --if-present typecheck
       - run: pnpm --filter @lockstep/worker test
+
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Test sql_guard
+        working-directory: packages/sql_guard
+        run: cargo test
