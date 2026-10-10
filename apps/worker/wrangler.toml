@@ -5,7 +5,11 @@ compatibility_date = "2026-10-04"
 [[d1_databases]]
 binding = "DB"
 database_name = "lockstep"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "d4657519-bebd-4043-93db-8528961f3e3c"
+
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "lockstep-runbooks"
 
 [durable_objects]
 bindings = [
