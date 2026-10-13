@@ -181,6 +181,24 @@
   background: var(--danger);
 }
 
+.credit {
+  display: block;
+  margin: 2px 8px 4px;
+  color: var(--text-4);
+  font-size: var(--text-xs);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease);
+}
+
+.credit:hover {
+  color: var(--accent-text);
+}
+
+.root[data-collapsed="true"] .credit {
+  margin: 2px 0 4px;
+  text-align: center;
+}
+
 @media (max-width: 767px) {
   .root[data-overlay="true"] {
     position: fixed;

@@ -112,6 +112,15 @@ export function NavSidebar({
           <span className={styles.dot} aria-hidden="true" />
           {rail ? <span className="sr-only">{connectionLabel(connection)}</span> : <span>{connectionDetail(connection, model)}</span>}
         </div>
+        <a
+          className={styles.credit}
+          href="https://github.com/s4natk"
+          target="_blank"
+          rel="noreferrer"
+          title="Built by @s4natk"
+        >
+          {rail ? <span aria-label="Built by @s4natk">@</span> : "Built by @s4natk"}
+        </a>
       </div>
     </nav>
   );
