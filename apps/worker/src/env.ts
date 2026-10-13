@@ -3,4 +3,5 @@ export interface Env {
   SESSION: DurableObjectNamespace;
   VECTORIZE?: VectorizeIndex;
   OPENAI_API_KEY?: string;
+  ALLOWED_ORIGINS?: string;
 }

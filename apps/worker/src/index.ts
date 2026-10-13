@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 
 import type { Env } from "./env.js";
+import { allowedOrigins } from "./origins.js";
 import { parseMigration, MigrationParseError } from "./parser.js";
 import { ReviewSession } from "./reviewSession.js";
 import { SessionRepository } from "./sessionRepository.js";
@@ -11,7 +12,7 @@ const app = new Hono<{ Bindings: Env }>();
 app.use(
   "*",
   cors({
-    origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+    origin: (origin, c) => (allowedOrigins(c.env.ALLOWED_ORIGINS).includes(origin) ? origin : null),
     allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type"],
   }),

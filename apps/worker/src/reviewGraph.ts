@@ -52,11 +52,14 @@ export interface ReviewModel {
   stream(input: DraftInput): AsyncIterable<string>;
 }
 
+export type ReviewStage = "retrieve" | "draft";
+
 export interface ReviewGraphDeps {
   parse: (sql: string) => Promise<ParseResult>;
   search: (query: string) => Promise<RunbookChunk[]>;
   model: ReviewModel;
   onToken?: (token: string) => void;
+  onStage?: (stage: ReviewStage) => void;
 }
 
 export function mockReviewModel(): ReviewModel {
@@ -94,12 +97,14 @@ export function compileReviewGraph(deps: ReviewGraphDeps) {
       return { hazards: parsed.hazards };
     })
     .addNode("search_runbooks", async (state) => {
+      deps.onStage?.("retrieve");
       const query = state.hazards.map((hazard) => hazard.reason).join(" ") || state.sql;
       const retrieved = await withSpan("retrieval.hybrid", () => deps.search(query));
       const extra = state.context.map((text, index) => ({ id: `context-${index}`, text }));
       return { chunks: [...extra, ...retrieved] };
     })
     .addNode("draft", async (state) => {
+      deps.onStage?.("draft");
       const formatted = await draftPrompt.formatMessages({
         sql: state.sql,
         hazards: state.hazards.map((hazard) => `- ${hazard.reason}`).join("\n") || "none",
@@ -139,6 +144,7 @@ export function compileReviewGraph(deps: ReviewGraphDeps) {
 
 export type ReviewStreamEvent =
   | { type: "token"; content: string }
+  | { type: "stage"; stage: ReviewStage }
   | {
       type: "done";
       note: string;
@@ -159,6 +165,9 @@ export async function* streamReview(
     ...deps,
     onToken(token) {
       queue.push({ type: "token", content: token });
+    },
+    onStage(stage) {
+      queue.push({ type: "stage", stage });
     },
   })
     .invoke({ sql, context: userContext })

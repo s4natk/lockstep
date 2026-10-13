@@ -2,6 +2,9 @@ name = "lockstep"
 main = "src/index.ts"
 compatibility_date = "2026-10-04"
 
+[vars]
+ALLOWED_ORIGINS = "https://lockstep-eta.vercel.app"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "lockstep"

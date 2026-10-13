@@ -14,6 +14,7 @@ let result: {
 } | undefined;
 const model = mockReviewModel();
 const tokens: string[] = [];
+const order: string[] = [];
 for await (const event of streamReview("DROP TABLE sessions", {
   parse: async () => ({
     statements: [
@@ -44,6 +45,7 @@ for await (const event of streamReview("DROP TABLE sessions", {
     },
   },
 })) {
+  order.push(event.type === "stage" ? `stage:${event.stage}` : event.type);
   if (event.type === "token") {
     tokens.push(event.content);
   }
@@ -54,6 +56,8 @@ for await (const event of streamReview("DROP TABLE sessions", {
 
 assert.ok(result);
 assert.ok(tokens.length > 1);
+assert.deepEqual(order.slice(0, 3), ["stage:retrieve", "stage:draft", "token"]);
+assert.equal(order.at(-1), "done");
 assert.match(tokens.join(""), /DROP TABLE deletes the table and its rows/);
 assert.match(prompt, /DROP TABLE deletes the table and its rows/);
 assert.match(result.note, /DROP TABLE deletes the table and its rows/);

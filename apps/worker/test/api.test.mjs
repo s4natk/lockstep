@@ -22,6 +22,17 @@ try {
   assert.equal(healthBody.openai.configured, false);
   assert.equal(healthBody.openai.mode, "mock");
 
+  const deployed = await worker.fetch("http://localhost/health", {
+    headers: { Origin: "https://lockstep-eta.vercel.app" },
+  });
+  assert.equal(deployed.headers.get("access-control-allow-origin"), "https://lockstep-eta.vercel.app");
+
+  const unknown = await worker.fetch("http://localhost/health", {
+    headers: { Origin: "https://example.com" },
+  });
+  assert.equal(unknown.status, 200);
+  assert.equal(unknown.headers.get("access-control-allow-origin"), null);
+
   const missing = await worker.fetch("http://localhost/api/parse", {
     method: "POST",
     headers: { "content-type": "application/json" },

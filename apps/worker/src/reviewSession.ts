@@ -40,7 +40,17 @@ export class ReviewSession implements DurableObject {
       send(server, { type: "error", error: request.error });
       return;
     }
-    const { text, context } = request;
+    const { kind, text, context } = request;
+
+    if (kind === "review") {
+      try {
+        await this.runReview(server, sessionId, text, context);
+      } catch (error) {
+        const message = error instanceof MigrationParseError ? error.message : "The review failed.";
+        send(server, { type: "error", error: message });
+      }
+      return;
+    }
 
     if (!looksLikeMigration(text)) {
       await this.runChat(server, sessionId, text);
@@ -100,6 +110,10 @@ export class ReviewSession implements DurableObject {
     }, context)) {
       if (event.type === "token") {
         send(server, { type: "token", content: event.content });
+        continue;
+      }
+      if (event.type === "stage") {
+        send(server, { type: "stage", stage: event.stage });
         continue;
       }
       await this.sessions.saveReview(sessionId, {

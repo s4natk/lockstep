@@ -35,11 +35,22 @@ const second = await embedder.embed("DROP TABLE deletes the table");
 assert.deepEqual(first, second);
 assert.equal(fetches, 0);
 
-for (const question of questions) {
+// The first question listed for each chunk is its canonical phrasing; the rest are paraphrases.
+const canonical = chunks.map((chunk) => questions.find((question) => question.chunkId === chunk.id)!);
+for (const question of canonical) {
   const [top] = await hybridSearch({ chunks, query: question.query, embedder, limit: 3 });
   assert.ok(top, question.query);
   assert.equal(top.id, question.chunkId, question.query);
 }
+
+let hits = 0;
+for (const question of questions) {
+  const found = await hybridSearch({ chunks, query: question.query, embedder, limit: 3 });
+  if (found.some((chunk) => chunk.id === question.chunkId)) {
+    hits += 1;
+  }
+}
+assert.ok(hits / questions.length >= 0.9, `recall@3 fell to ${hits}/${questions.length}`);
 
 const vectorize = {
   async query(): Promise<{ matches: Array<{ id: string }> }> {

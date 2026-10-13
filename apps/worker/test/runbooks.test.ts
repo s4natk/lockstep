@@ -22,7 +22,6 @@ const questions = JSON.parse(readFileSync(join(runbookDir, "questions.json"), "u
 }>;
 
 assert.equal(chunks.length, 15);
-assert.equal(questions.length, 15);
 assert.deepEqual(
   runbookChunks.map((chunk) => chunk.id),
   chunks.map((chunk) => chunk.id).sort(),
@@ -30,9 +29,15 @@ assert.deepEqual(
 for (const chunk of chunks) {
   const bundled = runbookChunks.find((candidate) => candidate.id === chunk.id);
   assert.equal(bundled?.text, chunk.text, chunk.id);
+  assert.ok(
+    questions.some((question) => question.chunkId === chunk.id),
+    `no eval question targets ${chunk.id}`,
+  );
 }
 
-for (const question of questions) {
+// The first question listed for each chunk is its canonical phrasing; the rest are paraphrases.
+const canonical = chunks.map((chunk) => questions.find((question) => question.chunkId === chunk.id)!);
+for (const question of canonical) {
   const [top] = searchRunbooks(chunks, question.query, 3);
   assert.ok(top, question.query);
   assert.equal(top.id, question.chunkId, question.query);
