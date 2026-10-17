@@ -18,10 +18,10 @@ app.use(
   }),
 );
 
-app.get("/health", (c) => {
-  const key = c.env.OPENAI_API_KEY;
+function healthBody(env: Env) {
+  const key = env.OPENAI_API_KEY;
   const configured = key !== undefined && key.trim() !== "";
-  return c.json({
+  return {
     ok: true,
     timestamp: new Date().toISOString(),
     openai: {
@@ -29,8 +29,11 @@ app.get("/health", (c) => {
       chatModel: "gpt-4.1-mini",
       mode: configured ? "live" : "mock",
     },
-  });
-});
+  };
+}
+
+app.get("/", (c) => c.json(healthBody(c.env)));
+app.get("/health", (c) => c.json(healthBody(c.env)));
 
 app.post("/api/parse", async (c) => {
   let body: unknown;

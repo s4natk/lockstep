@@ -11,6 +11,10 @@ const worker = await unstable_dev("src/index.ts", {
 });
 
 try {
+  const root = await worker.fetch("http://localhost/");
+  assert.equal(root.status, 200);
+  assert.equal((await root.json()).ok, true);
+
   const health = await worker.fetch("http://localhost/health", {
     headers: { Origin: "http://localhost:3000" },
   });

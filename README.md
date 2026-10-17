@@ -4,7 +4,7 @@
 
 A full-stack edge application that reviews SQL migrations using **WebAssembly-accelerated parsing**, **retrieval-augmented generation (RAG)**, **LangGraph orchestration**, and **real-time WebSocket streaming** — with OpenTelemetry span summaries and session persistence on Cloudflare D1. Frontend on Vercel; compute and agent state on Cloudflare’s global edge.
 
-**[Live demo](https://lockstep-eta.vercel.app/)** · **[API / Worker](https://lockstep.mrkanwalsanat.workers.dev)**
+**[Live demo](https://lockstep-eta.vercel.app/)** · **[API / Worker](https://lockstep.mrkanwalsanat.workers.dev/health)**
 
 ---
 
@@ -113,7 +113,7 @@ Lockstep demonstrates a modern **edge-native agent** for database migrations:
 | | URL |
 | --- | --- |
 | **Frontend** | [https://lockstep-eta.vercel.app/](https://lockstep-eta.vercel.app/) |
-| **Worker API** | [https://lockstep.mrkanwalsanat.workers.dev](https://lockstep.mrkanwalsanat.workers.dev) |
+| **Worker API** | [https://lockstep.mrkanwalsanat.workers.dev/health](https://lockstep.mrkanwalsanat.workers.dev/health) |
 | **Health check** | [https://lockstep.mrkanwalsanat.workers.dev/health](https://lockstep.mrkanwalsanat.workers.dev/health) |
 
 If the UI shows **“worker offline”**, set `NEXT_PUBLIC_WORKER_URL=https://lockstep.mrkanwalsanat.workers.dev` in Vercel (Production), then **redeploy** the web app so the build picks up the variable.
