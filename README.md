@@ -21,7 +21,7 @@ Lockstep demonstrates a modern **edge-native agent** for database migrations:
 - **Traces** `wasm.parse`, `retrieval.hybrid`, `retrieval.embed` / `retrieval.vectorize`, and `review.draft` with **OpenTelemetry**-style span summaries in the UI.
 - **Serves a Next.js chat UI** (React, TypeScript, custom CSS) with an optional **context rail** (localStorage) that is sent with each SQL review.
 
-**Key achievement:** **15/15 recall@3** on 15 bundled runbook eval questions with the local-hash embedder (`pnpm eval:retrieval`); **25** labeled migration fixtures validated by `cargo test` for the Wasm parser — no always-on servers, only Workers + Durable Objects at the edge.
+**Key achievement:** **94/100 recall@3** on 100 bundled runbook eval questions with the local-hash embedder (`pnpm eval:retrieval`); **25** labeled migration fixtures validated by `cargo test` for the Wasm parser — no always-on servers, only Workers + Durable Objects at the edge.
 
 ---
 
