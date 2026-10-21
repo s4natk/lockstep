@@ -22,7 +22,8 @@ export const metadata: Metadata = {
     default: "Lockstep",
     template: "%s · Lockstep",
   },
-  description: "PostgreSQL migration review workspace. Parse hazards, retrieve runbooks, and draft a cited rollout note.",
+  description:
+    "AI debugging and incident investigation. The current release reviews PostgreSQL migrations: parser hazards, retrieved runbooks, and a cited rollout note.",
   applicationName: "Lockstep",
 };
 

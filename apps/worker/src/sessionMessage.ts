@@ -1,3 +1,5 @@
+import { MAX_INVESTIGATION_CHARS } from "@lockstep/shared";
+
 export interface SessionMessage {
   kind: "review" | "message";
   text: string;
@@ -20,6 +22,9 @@ export function readSessionMessage(raw: string): SessionMessage | { error: strin
   const text = readText(record);
   if (text === null || text.trim() === "") {
     return { error: kind === "review" ? "sql is required" : "message is required" };
+  }
+  if (text.length > MAX_INVESTIGATION_CHARS) {
+    return { error: `Input exceeds ${MAX_INVESTIGATION_CHARS} characters.` };
   }
 
   if (!("context" in record) || record.context === undefined) {

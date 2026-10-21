@@ -1,8 +1,10 @@
 # Lockstep
 
-**Postgres migration review agent on Cloudflare Workers** — Rust classifies dangerous DDL, hybrid RAG retrieves runbooks, and a LangGraph draft streams a citation-grounded rollout note.
+**AI debugging and incident investigation.** Understand a failure, see the evidence behind an explanation, and decide what to check next.
 
-A full-stack edge application that reviews SQL migrations using **WebAssembly-accelerated parsing**, **retrieval-augmented generation (RAG)**, **LangGraph orchestration**, and **real-time WebSocket streaming** — with OpenTelemetry span summaries and session persistence on Cloudflare D1. Frontend on Vercel; compute and agent state on Cloudflare’s global edge.
+The workflow that runs today is PostgreSQL migration review. Rust classifies dangerous DDL, hybrid retrieval finds runbooks, and a LangGraph draft streams a citation-checked rollout note.
+
+The app is a Next.js workspace on Vercel and a Cloudflare Worker: WebAssembly parsing, Durable Object streaming, D1 sessions, and optional Vectorize.
 
 **[Live demo](https://lockstep-eta.vercel.app/)** · **[API / Worker](https://lockstep.mrkanwalsanat.workers.dev/health)**
 
@@ -10,7 +12,7 @@ A full-stack edge application that reviews SQL migrations using **WebAssembly-ac
 
 ## Project overview
 
-Lockstep demonstrates a modern **edge-native agent** for database migrations:
+What is implemented is an edge pipeline for PostgreSQL migration review:
 
 - **Parses migrations** with a **Rust → WebAssembly** module (`sqlparser`, Postgres dialect). Hazard labels (`data_loss`, `lock_risk`, `rewrite`) come from the parser, not the LLM.
 - **Retrieves runbooks** with **hybrid search**: keyword rank + embedding cosine similarity, fused with **reciprocal rank fusion (RRF)**. Uses **Cloudflare Vectorize** when bound; falls back to in-memory scoring locally or when Vectorize is unavailable.
@@ -19,9 +21,9 @@ Lockstep demonstrates a modern **edge-native agent** for database migrations:
 - **Routes chat vs review** — casual messages (e.g. “hi”) get a scoped assistant reply; DDL/SQL triggers the full review pipeline.
 - **Streams tokens** over a **WebSocket** on a **Durable Object** (`ReviewSession`), then persists the session in **D1**.
 - **Traces** `wasm.parse`, `retrieval.hybrid`, `retrieval.embed` / `retrieval.vectorize`, and `review.draft` with **OpenTelemetry**-style span summaries in the UI.
-- **Serves a Next.js chat UI** (React, TypeScript, custom CSS) with an optional **context rail** (localStorage) that is sent with each SQL review.
+- **Serves a Next.js review workspace** (React, TypeScript) with a SQL editor, hazard inspector, optional context notes, and a secondary Ask panel.
 
-**Key achievement:** **94/100 recall@3** on 100 bundled runbook eval questions with the local-hash embedder (`pnpm eval:retrieval`); **25** labeled migration fixtures validated by `cargo test` for the Wasm parser — no always-on servers, only Workers + Durable Objects at the edge.
+The worker test requires each runbook's canonical question to rank first, and recall@3 across `eval/runbooks/questions.json` to stay at least 90% with the local-hash embedder. `cargo test` in `packages/sql_guard` checks the labeled migrations in `eval/migrations`. This README does not treat those checks as a claim that the product debugs arbitrary errors.
 
 ---
 
@@ -329,7 +331,7 @@ lockstep/
 │   │   │   └── ...
 │   │   ├── schema.sql
 │   │   └── wrangler.toml
-│   └── web/                    # Next.js chat UI
+│   └── web/                    # Next.js review workspace
 │       └── src/
 │           ├── app/
 │           ├── components/

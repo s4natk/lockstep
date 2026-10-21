@@ -9,3 +9,9 @@ target/
 *.log
 .DS_Store
 Thumbs.db
+
+# Kept on this machine. Not part of the published project.
+docs/investigation.md
+apps/web/AGENTS.md
+apps/web/CLAUDE.md
+*.tsbuildinfo
