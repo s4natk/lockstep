@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Lockstep",
     short_name: "Lockstep",
-    description: "AI debugging and incident investigation. Current release: PostgreSQL migration review.",
+    description: "PostgreSQL migration review workspace",
     start_url: "/",
     display: "standalone",
     background_color: "#08090b",

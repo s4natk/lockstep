@@ -151,10 +151,7 @@ export function OverviewEmpty({ onExamples }: { onExamples: () => void }) {
     <div className={styles.vacant}>
       <Icon name="review" size={20} />
       <h3>No review yet</h3>
-      <p>
-        PostgreSQL migration review is the investigation available today. Paste a migration and run it. The parser,
-        retrieved runbooks, and cited rollout note land here.
-      </p>
+      <p>Paste a PostgreSQL migration and run it. The parser, retrieved runbooks, and cited rollout note land here.</p>
       <Button size="sm" icon="library" onClick={onExamples}>
         Browse examples
       </Button>

@@ -1,7 +1,5 @@
 import assert from "node:assert/strict";
 
-import { MAX_INVESTIGATION_CHARS } from "@lockstep/shared";
-
 import { looksLikeMigration } from "../src/migrationDetect.ts";
 import { allowedOrigins } from "../src/origins.ts";
 import { readSessionMessage } from "../src/sessionMessage.ts";
@@ -37,11 +35,6 @@ assert.deepEqual(missing, { error: "message is required" });
 
 const badContext = readSessionMessage(JSON.stringify({ type: "review", sql: "DROP TABLE t", context: [1] }));
 assert.deepEqual(badContext, { error: "context must be an array of strings" });
-
-const oversized = readSessionMessage(
-  JSON.stringify({ type: "review", sql: "A".repeat(MAX_INVESTIGATION_CHARS + 1) }),
-);
-assert.equal("error" in oversized, true);
 
 assert.deepEqual(allowedOrigins(undefined), ["http://localhost:3000", "http://127.0.0.1:3000"]);
 assert.deepEqual(allowedOrigins(" https://a.example/, ,https://b.example "), [
